@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Resume Tailor — Live Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #0f1e3d;
+    --blue:   #1a4080;
+    --lblue:  #2d6be4;
+    --sky:    #5b9cf6;
+    --ice:    #dbeafe;
+    --white:  #ffffff;
+    --off:    #f7f9fc;
+    --gray:   #64748b;
+    --lgray:  #e2e8f0;
+    --green:  #16a34a;
+    --lgreen: #dcfce7;
+    --orange: #ea580c;
+    --lorange:#fff7ed;
+    --red:    #dc2626;
+    --lred:   #fee2e2;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--white);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── BACKGROUND ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 0%, rgba(45,107,228,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 100%, rgba(91,156,246,0.12) 0%, transparent 60%),
+      var(--navy);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 1.5rem; }
+
+  /* ── HEADER ── */
+  header {
+    padding: 3rem 0 2rem;
+    text-align: center;
+  }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    background: rgba(45,107,228,0.18);
+    border: 1px solid rgba(91,156,246,0.3);
+    color: var(--sky);
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1.5rem;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--sky);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    line-height: 1.1;
+    color: var(--white);
+    margin-bottom: 1rem;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--sky);
+  }
+
+  .subtitle {
+    font-size: 1.05rem;
+    color: rgba(255,255,255,0.55);
+    font-weight: 300;
+    max-width: 520px;
+    margin: 0 auto 0.75rem;
+    line-height: 1.6;
+  }
+
+  /* ── AGENT PIPELINE VISUAL ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin: 2.5rem auto 3rem;
+    flex-wrap: wrap;
+    row-gap: 0.75rem;
+  }
+
+  .agent-chip {
+    display: flex; flex-direction: column; align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 0.75rem 1.2rem;
+    min-width: 130px;
+    transition: all 0.3s;
+  }
+
+  .agent-chip.active {
+    background: rgba(45,107,228,0.25);
+    border-color: var(--lblue);
+    box-shadow: 0 0 20px rgba(45,107,228,0.3);
+  }
+
+  .agent-chip.done {
+    background: rgba(22,163,74,0.15);
+    border-color: var(--green);
+  }
+
+  .agent-num {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sky);
+    margin-bottom: 0.25rem;
+  }
+
+  .agent-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .agent-role {
+    font-size: 0.72rem;
+    color: rgba(255,255,255,0.45);
+    margin-top: 0.15rem;
+  }
+
+  .arrow {
+    color: rgba(255,255,255,0.2);
+    font-size: 1.2rem;
+    padding: 0 0.3rem;
+    flex-shrink: 0;
+  }
+
+  /* ── API KEY ── */
+  .key-section {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 16px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .key-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--sky);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .key-input {
+    flex: 1;
+    min-width: 200px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    color: var(--white);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    padding: 0.6rem 1rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .key-input:focus { border-color: var(--lblue); }
+  .key-input::placeholder { color: rgba(255,255,255,0.2); }
+
+  .key-hint {
+    font-size: 0.73rem;
+    color: rgba(255,255,255,0.35);
+    width: 100%;
+  }
+
+  .key-hint a { color: var(--sky); text-decoration: none; }
+  .key-hint a:hover { text-decoration: underline; }
+
+  /* ── MAIN CARD ── */
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    border-radius: 20px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+  }
+
+  .card-header {
+    background: rgba(255,255,255,0.04);
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .card-icon {
+    width: 32px; height: 32px;
+    background: rgba(45,107,228,0.2);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.9rem;
+  }
+
+  .card-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .card-sub {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.4);
+    margin-top: 0.1rem;
+  }
+
+  .inputs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+  }
+
+  @media (max-width: 640px) {
+    .inputs-grid { grid-template-columns: 1fr; }
+    .divider-v { display: none; }
+  }
+
+  .input-pane {
+    padding: 1.25rem 1.5rem;
+  }
+
+  .input-pane:first-child {
+    border-right: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .pane-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--sky);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  textarea {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 10px;
+    color: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    padding: 0.9rem 1rem;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    min-height: 180px;
+  }
+
+  textarea:focus {
+    border-color: var(--lblue);
+    background: rgba(45,107,228,0.08);
+  }
+
+  textarea::placeholder { color: rgba(255,255,255,0.2); font-size: 0.82rem; }
+
+  /* ── RUN BUTTON ── */
+  .run-row {
+    padding: 1.25rem 1.5rem;
+    border-top: 1px solid rgba(255,255,255,0.07);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-run {
+    background: var(--lblue);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    padding: 0.8rem 2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .btn-run:hover:not(:disabled) {
+    background: #1a5cd4;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(45,107,228,0.4);
+  }
+
+  .btn-run:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .status-msg {
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.5);
+    font-style: italic;
+    display: none;
+  }
+
+  .status-msg.visible { display: block; }
+
+  /* spinner */
+  .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--white);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .spinner.visible { display: block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── RESULTS ── */
+  .results { display: none; }
+  .results.visible { display: block; }
+
+  .result-block {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    margin-bottom: 1.25rem;
+    overflow: hidden;
+    animation: fadeUp 0.4s ease both;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-block:nth-child(2) { animation-delay: 0.1s; }
+  .result-block:nth-child(3) { animation-delay: 0.2s; }
+
+  .result-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+
+  .result-badge {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.7rem;
+    border-radius: 999px;
+  }
+
+  .badge-1 { background: rgba(91,156,246,0.2); color: var(--sky); }
+  .badge-2 { background: rgba(45,107,228,0.2); color: #7eb3ff; }
+  .badge-3-approved { background: var(--lgreen); color: var(--green); }
+  .badge-3-flagged  { background: var(--lred);   color: var(--red);   }
+
+  .result-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  .result-body {
+    padding: 1.25rem 1.5rem;
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    white-space: pre-wrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* verdict special styling */
+  .verdict-approved {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: rgba(22,163,74,0.08);
+  }
+
+  .verdict-flagged {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem 1.5rem;
+    background: rgba(220,38,38,0.08);
+  }
+
+  .verdict-icon {
+    font-size: 2rem;
+    flex-shrink: 0;
+    line-height: 1;
+  }
+
+  .verdict-text {
+    font-size: 0.875rem;
+    color: rgba(255,255,255,0.75);
+    line-height: 1.75;
+    white-space: pre-wrap;
+  }
+
+  /* copy button */
+  .copy-btn {
+    margin-left: auto;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 6px;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.72rem;
+    font-family: 'DM Sans', sans-serif;
+    padding: 0.3rem 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .copy-btn:hover { background: rgba(255,255,255,0.12); color: var(--white); }
+
+  /* ── ERROR ── */
+  .error-box {
+    display: none;
+    background: rgba(220,38,38,0.1);
+    border: 1px solid rgba(220,38,38,0.3);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    color: #fca5a5;
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+  }
+
+  .error-box.visible { display: block; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 2.5rem 0 3rem;
+    color: rgba(255,255,255,0.2);
+    font-size: 0.78rem;
+  }
+
+  footer span { color: rgba(255,255,255,0.35); }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HEADER -->
+  <header>
+    <div class="badge">Live Demo</div>
+    <h1>AI Resume <em>Tailor</em></h1>
+    <p class="subtitle">Paste your resume and a job description. Three AI agents will analyze, rewrite, and verify the result — without making anything up.</p>
+  </header>
+
+  <!-- PIPELINE VISUAL -->
+  <div class="pipeline" id="pipeline">
+    <div class="agent-chip" id="chip1">
+      <div class="agent-num">Agent 1</div>
+      <div class="agent-name">Job Analyzer</div>
+      <div class="agent-role">Extracts keywords</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="agent-chip" id="chip2">
+      <div class="agent-num">Agent 2</div>
+      <div class="agent-name">Rewriter</div>
+      <div class="agent-role">Tailors resume</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="agent-chip" id="chip3">
+      <div class="agent-num">Agent 3</div>
+      <div class="agent-name">Critic</div>
+      <div class="agent-role">Checks accuracy</div>
+    </div>
+  </div>
+
+  <!-- API KEY -->
+  <div class="key-section">
+    <div class="key-label">🔑 Groq API Key</div>
+    <input class="key-input" type="password" id="apiKey" placeholder="gsk_..." autocomplete="off" />
+    <div class="key-hint">
+      Free key at <a href="https://console.groq.com" target="_blank">console.groq.com</a> — your key is never stored or sent anywhere except directly to Groq.
+    </div>
+  </div>
+
+  <!-- INPUT CARD -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📄</div>
+      <div>
+        <div class="card-title">Your Inputs</div>
+        <div class="card-sub">Paste both fields, then click Run</div>
+      </div>
+    </div>
+    <div class="inputs-grid">
+      <div class="input-pane">
+        <div class="pane-label">📋 Your Resume</div>
+        <textarea id="resumeBox" placeholder="Paste your full resume here as plain text...&#10;&#10;Include your experience, skills, education, and any relevant projects."></textarea>
+      </div>
+      <div class="input-pane">
+        <div class="pane-label">💼 Job Description</div>
+        <textarea id="jobBox" placeholder="Paste the job description here...&#10;&#10;Include the full posting with requirements, responsibilities, and qualifications."></textarea>
+      </div>
+    </div>
+    <div class="run-row">
+      <button class="btn-run" id="runBtn" onclick="runPipeline()">
+        <div class="spinner" id="spinner"></div>
+        <span id="btnText">✨ Tailor My Resume</span>
+      </button>
+      <div class="status-msg" id="statusMsg">Initializing...</div>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- RESULTS -->
+  <div class="results" id="results">
+
+    <!-- Agent 1 output -->
+    <div class="result-block">
+      <div class="result-header">
+        <div class="result-badge badge-1">Agent 1 — Job Analyzer</div>
+        <div class="result-title">Extracted Keywords & Requirements</div>
+        <button class="copy-btn" onclick="copyText('out1')">Copy</button>
+      </div>
+      <div class="result-body" id="out1"></div>
+    </div>
+
+    <!-- Agent 2 output -->
+    <div class="result-block">
+      <div class="result-header">
+        <div class="result-badge badge-2">Agent 2 — Rewriter</div>
+        <div class="result-title">Tailored Resume</div>
+        <button class="copy-btn" onclick="copyText('out2')">Copy</button>
+      </div>
+      <div class="result-body" id="out2"></div>
+    </div>
+
+    <!-- Agent 3 output -->
+    <div class="result-block" id="verdictBlock">
+      <div class="result-header">
+        <div class="result-badge" id="verdictBadge">Agent 3 — Critic</div>
+        <div class="result-title">Accuracy Verdict</div>
+      </div>
+      <div id="verdictBody"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    Built by <span>Hamdy Ismail</span> · CIS Capstone · Georgia State University · 2025<br>
+    Powered by Groq API · Llama 3.3 70B
+  </footer>
+
+</div>
+
+<script>
+async function askGroq(apiKey, prompt) {
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: prompt }],
+      max_tokens: 2048,
+      temperature: 0.3
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `API error ${res.status}`);
+  }
+  const data = await res.json();
+  return data.choices[0].message.content;
+}
+
+function setStatus(msg) {
+  const el = document.getElementById("statusMsg");
+  el.textContent = msg;
+  el.classList.add("visible");
+}
+
+function setChipActive(n) {
+  [1,2,3].forEach(i => {
+    const c = document.getElementById("chip"+i);
+    c.classList.remove("active","done");
+    if (i < n) c.classList.add("done");
+    if (i === n) c.classList.add("active");
+  });
+}
+
+function resetChips() {
+  [1,2,3].forEach(i => {
+    document.getElementById("chip"+i).classList.remove("active","done");
+  });
+}
+
+function showError(msg) {
+  const box = document.getElementById("errorBox");
+  box.textContent = "⚠ " + msg;
+  box.classList.add("visible");
+}
+
+function hideError() {
+  document.getElementById("errorBox").classList.remove("visible");
+}
+
+function copyText(id) {
+  const text = document.getElementById(id).textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    event.target.textContent = "Copied!";
+    setTimeout(() => event.target.textContent = "Copy", 1500);
+  });
+}
+
+async function runPipeline() {
+  const apiKey = document.getElementById("apiKey").value.trim();
+  const resume = document.getElementById("resumeBox").value.trim();
+  const job    = document.getElementById("jobBox").value.trim();
+
+  hideError();
+
+  if (!apiKey) { showError("Please enter your Groq API key above."); return; }
+  if (!resume)  { showError("Please paste your resume."); return; }
+  if (!job)     { showError("Please paste a job description."); return; }
+
+  const btn     = document.getElementById("runBtn");
+  const spinner = document.getElementById("spinner");
+  const btnText = document.getElementById("btnText");
+  const results = document.getElementById("results");
+
+  btn.disabled = true;
+  spinner.classList.add("visible");
+  btnText.textContent = "Running...";
+  results.classList.remove("visible");
+  resetChips();
+
+  try {
+    // ── Agent 1 ──────────────────────────────────────────────
+    setChipActive(1);
+    setStatus("⏳ Agent 1: Analyzing job description...");
+
+    const p1 = `Read this job description and list the most important skills, keywords, and requirements the employer is looking for.
+Keep it concise — just a bullet list, no extra commentary.
+
+Job Description:
+${job}`;
+
+    const keywords = await askGroq(apiKey, p1);
+    document.getElementById("out1").textContent = keywords;
+
+    // ── Agent 2 ──────────────────────────────────────────────
+    setChipActive(2);
+    setStatus("⏳ Agent 2: Rewriting your resume...");
+
+    const p2 = `Rewrite this resume to better match the job keywords below.
+RULES:
+- Only use information already in the resume
+- Do NOT add skills, jobs, or experience that are not there
+- You CAN rephrase things to use the job's keywords
+- Keep it professional and well formatted
+
+Job keywords:
+${keywords}
+
+Original resume:
+${resume}`;
+
+    const rewritten = await askGroq(apiKey, p2);
+    document.getElementById("out2").textContent = rewritten;
+
+    // ── Agent 3 ──────────────────────────────────────────────
+    setChipActive(3);
+    setStatus("⏳ Agent 3: Checking for accuracy...");
+
+    const p3 = `Compare these two resumes. Check if the rewritten version added anything that was NOT in the original.
+Fake skills, made-up jobs, or invented achievements are NOT allowed.
+
+If everything looks honest, respond with:
+APPROVED - no issues found.
+
+If something was added that wasn't in the original, respond with:
+FLAGGED - then explain what the problem is.
+
+Original resume:
+${resume}
+
+Rewritten resume:
+${rewritten}`;
+
+    const verdict = await askGroq(apiKey, p3);
+
+    // Render verdict
+    const isApproved = verdict.toUpperCase().includes("APPROVED");
+    const vBadge = document.getElementById("verdictBadge");
+    const vBody  = document.getElementById("verdictBody");
+
+    if (isApproved) {
+      vBadge.className = "result-badge badge-3-approved";
+      vBadge.textContent = "Agent 3 — APPROVED ✓";
+      vBody.innerHTML = `<div class="verdict-approved">
+        <div class="verdict-icon">✅</div>
+        <div class="verdict-text">${escapeHtml(verdict)}</div>
+      </div>`;
+    } else {
+      vBadge.className = "result-badge badge-3-flagged";
+      vBadge.textContent = "Agent 3 — FLAGGED ⚠";
+      vBody.innerHTML = `<div class="verdict-flagged">
+        <div class="verdict-icon">⚠️</div>
+        <div class="verdict-text">${escapeHtml(verdict)}</div>
+      </div>`;
+    }
+
+    // Mark all done
+    [1,2,3].forEach(i => {
+      const c = document.getElementById("chip"+i);
+      c.classList.remove("active");
+      c.classList.add("done");
+    });
+
+    results.classList.add("visible");
+    setStatus(isApproved
+      ? "✅ Done! All 3 agents finished. Your tailored resume is ready."
+      : "⚠ Done — Agent 3 flagged some issues. Review the verdict below.");
+
+    // Scroll to results
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  } catch (err) {
+    resetChips();
+    showError("Something went wrong: " + err.message + ". Check your API key and try again.");
+    setStatus("");
+    document.getElementById("statusMsg").classList.remove("visible");
+  } finally {
+    btn.disabled = false;
+    spinner.classList.remove("visible");
+    btnText.textContent = "✨ Tailor My Resume";
+  }
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+
+// Allow Enter in key field to trigger run
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("apiKey").addEventListener("keydown", e => {
+    if (e.key === "Enter") runPipeline();
+  });
+});
+</script>
+</body>
+</html>
